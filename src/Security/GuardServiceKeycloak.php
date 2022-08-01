@@ -6,6 +6,7 @@ namespace App\Security;
 use App\Entity\Team;
 use App\Entity\User;
 use App\Repository\TeamRepository;
+use App\Service\CurrentTeamService;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use KnpU\OAuth2ClientBundle\Client\Provider\KeycloakClient;
@@ -23,35 +24,47 @@ use Symfony\Component\Security\Http\Util\TargetPathTrait;
 class GuardServiceKeycloak extends SocialAuthenticator
 {
     use TargetPathTrait;
+
     private $clientRegistry;
     private $em;
     private $router;
     private $tokenStorage;
     private $userManager;
     private $teamRepository;
+    private CurrentTeamService $currentTeamService;
 
-    public function __construct(TokenStorageInterface $tokenStorage, ClientRegistry $clientRegistry, EntityManagerInterface $em, RouterInterface $router, TeamRepository $teamRepository)
+    public function __construct(TokenStorageInterface      $tokenStorage,
+                                ClientRegistry             $clientRegistry,
+                                EntityManagerInterface     $em,
+                                RouterInterface            $router,
+                                TeamRepository             $teamRepository,
+                                CurrentTeamService $currentTeamService
+    )
     {
         $this->clientRegistry = $clientRegistry;
         $this->em = $em;
         $this->router = $router;
         $this->tokenStorage = $tokenStorage;
         $this->teamRepository = $teamRepository;
+        $this->currentTeamService = $currentTeamService;
     }
 
-    public function supports(Request $request)
+    public
+    function supports(Request $request)
     {
         // continue ONLY if the current ROUTE matches the check ROUTE
         return $request->attributes->get('_route') === 'connect_keycloak_check';
     }
 
-    public function getCredentials(Request $request)
+    public
+    function getCredentials(Request $request)
     {
 
         return $this->fetchAccessToken($this->getauth0Client());
     }
 
-    public function getUser($credentials, UserProviderInterface $userProvider)
+    public
+    function getUser($credentials, UserProviderInterface $userProvider)
     {
 
         /** @var KeycloakResourceOwner $keycloakUser */
@@ -96,7 +109,7 @@ class GuardServiceKeycloak extends SocialAuthenticator
         }
 
         // 3) the user has never logged in with this email address or keycloak
-        $newUser = new User();
+        $newUser = new User($this->currentTeamService);
         $newUser->setPassword('123')
             ->setFirstName($firstName)
             ->setLastName($lastName)
@@ -115,7 +128,9 @@ class GuardServiceKeycloak extends SocialAuthenticator
     /**
      * @return Team[]
      */
-    private function getTeamsFromKeycloakGroups(?array $groups) {
+    private
+    function getTeamsFromKeycloakGroups(?array $groups)
+    {
         $teams = [];
         foreach ($groups as $group) {
             $team = $this->teamRepository->findOneBy(array('name' => $group));
@@ -129,13 +144,15 @@ class GuardServiceKeycloak extends SocialAuthenticator
     /**
      * @return KeycloakClient
      */
-    private function getauth0Client()
+    private
+    function getauth0Client()
     {
         return $this->clientRegistry
             ->getClient('keycloak_main');
     }
 
-    public function onAuthenticationSuccess(Request $request, TokenInterface $token, $providerKey)
+    public
+    function onAuthenticationSuccess(Request $request, TokenInterface $token, $providerKey)
     {
 
         // change "app_homepage" to some route in your app
@@ -148,7 +165,8 @@ class GuardServiceKeycloak extends SocialAuthenticator
 
     }
 
-    public function onAuthenticationFailure(Request $request, AuthenticationException $exception)
+    public
+    function onAuthenticationFailure(Request $request, AuthenticationException $exception)
     {
         return new RedirectResponse($this->router->generate('no_team'));
     }
@@ -157,7 +175,8 @@ class GuardServiceKeycloak extends SocialAuthenticator
      * Called when authentication is needed, but it's not sent.
      * This redirects to the 'login'.
      */
-    public function start(Request $request, AuthenticationException $authException = null)
+    public
+    function start(Request $request, AuthenticationException $authException = null)
     {
         $targetUrl = $this->router->generate('login_keycloak');
         return new RedirectResponse($targetUrl);
