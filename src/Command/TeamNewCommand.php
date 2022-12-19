@@ -26,7 +26,7 @@ class TeamNewCommand extends Command
             ->setDescription(self::$defaultDescription);
     }
 
-    public function __construct(string $name = null, EntityManagerInterface $entityManager, ConnectDefaultToTeamsService $connectDefaultToTeamsService)
+    public function __construct(EntityManagerInterface $entityManager, ConnectDefaultToTeamsService $connectDefaultToTeamsService, string $name = null )
     {
         parent::__construct($name);
         $this->em = $entityManager;

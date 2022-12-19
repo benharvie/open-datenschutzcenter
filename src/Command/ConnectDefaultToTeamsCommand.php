@@ -20,7 +20,7 @@ class ConnectDefaultToTeamsCommand extends Command
     private $connectDefaultService;
     private $em;
 
-    public function __construct($name = null, ConnectDefaultToTeamsService $connectDefaultToTeamsService, EntityManagerInterface $entityManager)
+    public function __construct(ConnectDefaultToTeamsService $connectDefaultToTeamsService, EntityManagerInterface $entityManager, $name = null )
     {
         parent::__construct($name);
         $this->connectDefaultService = $connectDefaultToTeamsService;
